@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>리센느 라이브 검색</title>
+    <style>
+      :root {
+        --bg: #faf8fc;
+        --surface: #ffffff;
+        --text: #221d2a;
+        --muted: #6f6779;
+        --line: #e6e0ee;
+        --accent: #7b4fd6;
+        --accent-soft: #efe8fc;
+        --mark: #ffe58a;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #15121a;
+          --surface: #1f1b26;
+          --text: #ece8f2;
+          --muted: #a39cae;
+          --line: #322c3c;
+          --accent: #b598ff;
+          --accent-soft: #2c2440;
+          --mark: #6b5718;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.6 -apple-system,
+          "Pretendard",
+          "Apple SD Gothic Neo",
+          "Malgun Gothic",
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
+        padding: 16px;
+      }
+      .wrap {
+        max-width: 860px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 18px;
+        letter-spacing: -0.02em;
+      }
+      h1 span {
+        color: var(--accent);
+      }
+      #q {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        outline: none;
+      }
+      #q:focus {
+        border-color: var(--accent);
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      select {
+        padding: 5px 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+      }
+      #stat {
+        margin-left: auto;
+      }
+      main {
+        padding: 16px;
+      }
+      .video {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin-bottom: 14px;
+        overflow: hidden;
+      }
+      .vhead {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        align-items: center;
+      }
+      .vhead img {
+        width: 112px;
+        aspect-ratio: 16/9;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
+        background: var(--line);
+      }
+      .vtitle {
+        font-weight: 600;
+        line-height: 1.4;
+      }
+      .vmeta {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .vmeta a {
+        color: var(--muted);
+      }
+      .badge {
+        display: inline-block;
+        padding: 0 6px;
+        border-radius: 4px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 11px;
+        margin-right: 4px;
+      }
+      .player {
+        aspect-ratio: 16/9;
+        width: 100%;
+        border: 0;
+        display: block;
+        background: #000;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0 12px 8px;
+      }
+      li {
+        display: flex;
+        gap: 10px;
+        padding: 7px 0;
+        border-top: 1px solid var(--line);
+      }
+      .ts {
+        flex-shrink: 0;
+        font:
+          600 13px/1.6 ui-monospace,
+          Consolas,
+          monospace;
+        color: var(--accent);
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        min-width: 64px;
+        text-align: left;
+      }
+      .ts:hover {
+        text-decoration: underline;
+      }
+      .ctx {
+        color: var(--muted);
+      }
+      .ctx b {
+        color: var(--text);
+        font-weight: 400;
+      }
+      .label {
+        padding: 4px 12px 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .alt {
+        display: block;
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      mark {
+        background: var(--mark);
+        color: inherit;
+        border-radius: 2px;
+      }
+      .more {
+        display: block;
+        width: 100%;
+        padding: 8px;
+        border: 0;
+        border-top: 1px solid var(--line);
+        background: none;
+        color: var(--accent);
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 48px 0;
+      }
+      .help {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .help code {
+        background: var(--accent-soft);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      @media (max-width: 520px) {
+        .vhead img {
+          width: 84px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1><span>RESCENE</span> 라이브 검색</h1>
+        <input
+          id="q"
+          type="search"
+          placeholder="그 얘기 어느 라이브였지? (예: 떡볶이, 원이 생일)"
+          autofocus
+        />
+        <div class="controls">
+          <select id="year">
+            <option value="">전체 기간</option>
+          </select>
+          <select id="sort">
+            <option value="rel">관련도순</option>
+            <option value="date">최신순</option>
+            <option value="old">오래된순</option>
+          </select>
+          <span id="stat">불러오는 중…</span>
+        </div>
+      </div>
+    </header>
+    <main class="wrap" id="results"></main>
+
+    <script src="search.js"></script>
+    <script>
+      // GoatCounter 주소 (예: "https://rescene.goatcounter.com/count"). 비워 두면 검색 기록을 하지 않는다.
+      // 검색어만 익명으로 기록하고 쿠키·개인 정보는 쓰지 않는다.
+      const GOATCOUNTER_URL = "https://scentiment.goatcounter.com/count";
+
+      const $ = (s) => document.querySelector(s);
+      const PAGE = 8; // 영상당 처음 보여줄 결과 수
+      let DB = null;
+      const { norm, countMatch } = RSearch;
+
+      const esc = (s) =>
+        s.replace(
+          /[&<>"]/g,
+          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+        );
+      const fmt = (t) => {
+        const h = Math.floor(t / 3600),
+          m = Math.floor((t % 3600) / 60),
+          s = t % 60;
+        return (
+          (h ? h + ":" + String(m).padStart(2, "0") : m) +
+          ":" +
+          String(s).padStart(2, "0")
+        );
+      };
+
+      // ── 검색 기록 ──
+      // 검색어 입력이 1.5초 멈추면 한 번 기록한다: zero/검색어(결과 없음), search/검색어(결과 있음).
+      // 결과를 재생하면 play/검색어. "search는 있는데 play가 없는" 검색어가 못 찾은 검색이다.
+      function track(kind, q) {
+        if (
+          !GOATCOUNTER_URL ||
+          !window.goatcounter ||
+          !window.goatcounter.count
+        )
+          return;
+        window.goatcounter.count({
+          path: `${kind}/${q.trim().toLowerCase()}`,
+          title: kind,
+          event: true,
+        });
+      }
+      if (GOATCOUNTER_URL) {
+        const sc = document.createElement("script");
+        sc.async = true;
+        sc.src = "https://gc.zgo.at/count.js";
+        sc.dataset.goatcounter = GOATCOUNTER_URL;
+        sc.dataset.goatcounterSettings = JSON.stringify({ path: "/" }); // 주소창의 ?q= 는 방문 기록에 남기지 않는다
+        document.head.appendChild(sc);
+      }
+      let logTimer;
+      function logSearch(q, found) {
+        clearTimeout(logTimer);
+        if (q.trim())
+          logTimer = setTimeout(
+            () => track(found ? "search" : "zero", q),
+            1500,
+          );
+      }
+
+      async function load() {
+        DB = await (await fetch("data.json")).json();
+        RSearch.prepare(DB);
+        const years = [
+          ...new Set(
+            DB.videos.map((v) => (v.date || "").slice(0, 4)).filter(Boolean),
+          ),
+        ]
+          .sort()
+          .reverse();
+        $("#year").insertAdjacentHTML(
+          "beforeend",
+          years.map((y) => `<option>${y}</option>`).join(""),
+        );
+        const hours = DB.videos.reduce((a, v) => a + v.duration, 0) / 3600;
+        $("#stat").textContent =
+          `라이브 ${DB.videos.length}개 · ${Math.round(hours)}시간`;
+
+        const q = new URLSearchParams(location.search).get("q");
+        if (q) $("#q").value = q;
+        search();
+      }
+
+      function search() {
+        if (!DB) return;
+        const raw = $("#q").value;
+        const url = new URL(location);
+        raw.trim()
+          ? url.searchParams.set("q", raw.trim())
+          : url.searchParams.delete("q");
+        history.replaceState(null, "", url);
+
+        const { terms, results } = RSearch.search(DB, raw, {
+          year: $("#year").value,
+        });
+        if (!terms.length) {
+          $("#results").innerHTML = `<div class="empty">
+      <p>기억나는 장면이나 말을 검색해 보세요.</p>
+      <p class="help">예: <code>리브 가리지마</code> · <code>검은 건반</code> · <code>원이 핫도그 시무룩</code><br>
+      팬 댓글 타임스탬프와 라이브 대화를 함께 찾아요 · 멤버 별명도 인정해요 (<code>까엉이</code> → 제나)</p></div>`;
+          return;
+        }
+        const sort = $("#sort").value;
+        const out = [...results];
+        if (sort === "date")
+          out.sort((a, b) => (b.v.date || "").localeCompare(a.v.date || ""));
+        if (sort === "old")
+          out.sort((a, b) => (a.v.date || "").localeCompare(b.v.date || ""));
+        render(out, terms);
+        logSearch(raw, out.length > 0);
+      }
+
+      function highlight(text, terms) {
+        // 원문은 띄어쓰기가 있어서, 검색어 글자 사이에 공백이 끼어도 잡히는 정규식을 쓴다
+        const pats = terms
+          .flat()
+          .map((t) =>
+            [...t]
+              .map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+              .join("\\s*"),
+          );
+        return esc(text).replace(
+          new RegExp(`(${pats.join("|")})`, "gi"),
+          "<mark>$1</mark>",
+        );
+      }
+
+      function render(out, terms) {
+        const nScenes = out.reduce((a, r) => a + r.scenes.length, 0);
+        const nHits = out.reduce((a, r) => a + r.hits.length, 0);
+        $("#stat").textContent =
+          `${out.length}개 라이브 · 팬 장면 ${nScenes} · 대화 ${nHits}`;
+        if (!out.length) {
+          $("#results").innerHTML =
+            `<div class="empty">찾는 내용이 없어요. 다른 표현으로 검색해 보세요.<br>
+      <span class="help">짧은 핵심 단어로 검색하면 더 잘 찾아요</span></div>`;
+          return;
+        }
+        $("#results").innerHTML = out
+          .map(
+            ({ v, scenes, hits }) => `
+    <section class="video" data-id="${v.id}">
+      <div class="vhead">
+        <img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy">
+        <div>
+          <div class="vtitle">${esc(v.title)}</div>
+          <div class="vmeta">${v.channel !== "RESCENE" ? `<span class="badge">${esc(v.channel)}</span>` : ""}
+            ${v.date || ""} · ${fmt(v.duration)} ·
+            <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">유튜브</a></div>
+        </div>
+      </div>
+      ${
+        scenes.length
+          ? `<div class="label">💬 팬들이 댓글로 남긴 장면</div>
+        <ul>${scenes.map((s, k) => sceneRow(v, s.i, terms, k >= PAGE)).join("")}</ul>`
+          : ""
+      }
+      ${
+        hits.length
+          ? `<div class="label">🎙 라이브 대화</div>
+        <ul>${hits.map((i, k) => row(v, i, terms, k >= PAGE)).join("")}</ul>`
+          : ""
+      }
+      ${scenes.length > PAGE || hits.length > PAGE ? `<button class="more">더 보기</button>` : ""}
+    </section>`,
+          )
+          .join("");
+      }
+
+      function sceneRow(v, i, terms, hidden) {
+        const [t, likes, count, labels] = v.scenes[i];
+        // 검색어가 들어간 설명을 먼저, 그다음 좋아요순으로 3개까지
+        const sorted = [...labels]
+          .sort(
+            (a, b) => countMatch(norm(b), terms) - countMatch(norm(a), terms),
+          )
+          .slice(0, 3);
+        return `<li${hidden ? " hidden" : ""}><button class="ts" data-t="${t}">▶ ${fmt(t)}</button>
+    <span class="ctx"><b>${sorted.map((l) => highlight(l, terms)).join("<br>")}</b>
+    <span class="alt">댓글 ${count}개 · ♥ ${likes.toLocaleString()}</span></span></li>`;
+      }
+
+      function row(v, i, terms, hidden) {
+        const s = v.segs,
+          t = s[i][0];
+        const ctx =
+          (s[i - 1] ? esc(s[i - 1][1]) + " " : "") +
+          `<b>${highlight(s[i][1], terms)}</b>` +
+          (s[i + 1] ? " " + highlight(s[i + 1][1], terms) : "");
+        // 화면 문장에는 없고 유튜브 자막에서만 찾은 경우, 그 자막도 보여준다
+        const shown = norm(
+          [s[i - 1], s[i], s[i + 1]]
+            .filter(Boolean)
+            .map((x) => x[1])
+            .join(""),
+        );
+        const alt =
+          s[i][2] && terms.some((alts) => !alts.some((t) => shown.includes(t)))
+            ? `<span class="alt">유튜브 자막: ${highlight(s[i][2], terms)}</span>`
+            : "";
+        return `<li${hidden ? " hidden" : ""}><button class="ts" data-t="${t}">▶ ${fmt(t)}</button>
+    <span class="ctx">${ctx}${alt}</span></li>`;
+      }
+
+      $("#results").addEventListener("click", (e) => {
+        const sec = e.target.closest(".video");
+        if (e.target.matches(".more")) {
+          sec
+            .querySelectorAll("li[hidden]")
+            .forEach((li) => (li.hidden = false));
+          e.target.remove();
+        }
+        if (e.target.matches(".ts")) {
+          track("play", $("#q").value);
+          // 잡담 맥락을 살리려고 3초 앞에서 재생
+          const start = Math.max(0, +e.target.dataset.t - 3);
+          let player = sec.querySelector(".player");
+          if (!player) {
+            player = document.createElement("iframe");
+            player.className = "player";
+            player.allow = "autoplay; encrypted-media; fullscreen";
+            sec.querySelector(".vhead").after(player);
+          }
+          player.src = `https://www.youtube-nocookie.com/embed/${sec.dataset.id}?start=${start}&autoplay=1`;
+          player.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+
+      let timer;
+      $("#q").addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(search, 200);
+      });
+      $("#year").addEventListener("change", search);
+      $("#sort").addEventListener("change", search);
+      load();
+    </script>
+  </body>
+</html>
