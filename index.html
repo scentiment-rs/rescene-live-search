@@ -395,7 +395,17 @@
         }
         $("#results").innerHTML = out
           .map(
-            ({ v, scenes, hits }) => `
+            ({ v, scenes, hits, talkFirst }) => {
+              const sceneHtml = scenes.length
+                ? `<div class="label">💬 팬들이 댓글로 남긴 장면</div>
+        <ul>${scenes.map((s, k) => sceneRow(v, s.i, terms, k >= PAGE)).join("")}</ul>`
+                : "";
+              const talkHtml = hits.length
+                ? `<div class="label">🎙 라이브 대화</div>
+        <ul>${hits.map((i, k) => row(v, i, terms, k >= PAGE)).join("")}</ul>`
+                : "";
+              // 검색어가 그대로 나온 쪽을 먼저 보여준다 (search.js의 talkFirst)
+              return `
     <section class="video" data-id="${v.id}">
       <div class="vhead">
         <img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy">
@@ -406,20 +416,10 @@
             <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">유튜브</a></div>
         </div>
       </div>
-      ${
-        scenes.length
-          ? `<div class="label">💬 팬들이 댓글로 남긴 장면</div>
-        <ul>${scenes.map((s, k) => sceneRow(v, s.i, terms, k >= PAGE)).join("")}</ul>`
-          : ""
-      }
-      ${
-        hits.length
-          ? `<div class="label">🎙 라이브 대화</div>
-        <ul>${hits.map((i, k) => row(v, i, terms, k >= PAGE)).join("")}</ul>`
-          : ""
-      }
+      ${talkFirst ? talkHtml + sceneHtml : sceneHtml + talkHtml}
       ${scenes.length > PAGE || hits.length > PAGE ? `<button class="more">더 보기</button>` : ""}
-    </section>`,
+    </section>`;
+            },
           )
           .join("");
       }
@@ -440,20 +440,19 @@
       function row(v, i, terms, hidden) {
         const s = v.segs,
           t = s[i][0];
+        // 앞뒤 문장은 맥락만 보이게 짧게 자른다 (문장이 길어서 다 보이면 결과끼리 내용이 겹친다)
+        const CTX = 40;
+        const before = s[i - 1] ? s[i - 1][1] : "";
+        const after = s[i + 1] ? s[i + 1][1] : "";
         const ctx =
-          (s[i - 1] ? esc(s[i - 1][1]) + " " : "") +
+          (before ? esc(before.length > CTX ? "…" + before.slice(-CTX) : before) + " " : "") +
           `<b>${highlight(s[i][1], terms)}</b>` +
-          (s[i + 1] ? " " + highlight(s[i + 1][1], terms) : "");
-        // 화면 문장에는 없고 유튜브 자막에서만 찾은 경우, 그 자막도 보여준다
-        const shown = norm(
-          [s[i - 1], s[i], s[i + 1]]
-            .filter(Boolean)
-            .map((x) => x[1])
-            .join(""),
-        );
+          (after ? " " + highlight(after.length > CTX ? after.slice(0, CTX) + "…" : after, terms) : "");
+        // 화면 문장에는 없고 다른 받아쓰기(Whisper)에서만 찾은 경우, 그 문장도 보여준다
+        const shown = norm([before, s[i][1], after].join(""));
         const alt =
           s[i][2] && terms.some((alts) => !alts.some((t) => shown.includes(t)))
-            ? `<span class="alt">유튜브 자막: ${highlight(s[i][2], terms)}</span>`
+            ? `<span class="alt">다른 받아쓰기: ${highlight(s[i][2], terms)}</span>`
             : "";
         return `<li${hidden ? " hidden" : ""}><button class="ts" data-t="${t}">▶ ${fmt(t)}</button>
     <span class="ctx">${ctx}${alt}</span></li>`;
